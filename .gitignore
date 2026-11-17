@@ -55,6 +55,8 @@ frontend/test-results/
 # 4. Logs, Temp and Runtime Artifacts
 logs/
 *.log
+*.jtl
+jmeter-report/
 *.sqlite
 *.sqlite3
 backend/data/store.json
