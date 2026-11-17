@@ -1,0 +1,315 @@
+{
+  "info": {
+    "name": "MineMarket API - Pruebas de Integración",
+    "description": "Colección automatizada Postman/Newman para validar Auth JWT/BCrypt, Catálogo CRUD/RBAC, Carrito Persistente, Checkout ACID e Idempotency-Key.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Health Check",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status 200 OK', () => pm.response.to.have.status(200));",
+              "pm.test('Tiempo de respuesta <= 200ms', () => pm.expect(pm.response.responseTime).to.be.below(200));",
+              "pm.test('Estado operativo ok', () => pm.expect(pm.response.json().status).to.eql('ok'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/health"
+      }
+    },
+    {
+      "name": "2. Registro Comprador (HU01)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const uid = Date.now().toString().slice(-6);",
+              "pm.environment.set('buyer_email', `postman_buyer_${uid}@minemarket.com`);",
+              "pm.environment.set('buyer_tag', `PmBuy_${uid}`);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Registro 201 Created', () => pm.response.to.have.status(201));",
+              "const body = pm.response.json();",
+              "pm.test('Rol COMPRADOR y sin password_hash', () => {",
+              "  pm.expect(body.usuario.rol).to.eql('COMPRADOR');",
+              "  pm.expect(body.usuario).to.not.have.property('password_hash');",
+              "});",
+              "pm.environment.set('buyer_token', body.token);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Comprador Postman\",\n  \"email\": \"{{buyer_email}}\",\n  \"password\": \"Diamante123\",\n  \"gamertag_minecraft\": \"{{buyer_tag}}\",\n  \"rol\": \"COMPRADOR\"\n}"
+        },
+        "url": "{{base_url}}/api/auth/register"
+      }
+    },
+    {
+      "name": "3. Registro ADMIN Bloqueado (Seguridad RBAC)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Bloquea auto-registro ADMIN con 400', () => pm.response.to.have.status(400));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Intruder\",\n  \"email\": \"intruder_pm@minemarket.com\",\n  \"password\": \"Diamante123\",\n  \"gamertag_minecraft\": \"Intruder99\",\n  \"rol\": \"ADMIN\"\n}"
+        },
+        "url": "{{base_url}}/api/auth/register"
+      }
+    },
+    {
+      "name": "4. Login Vendedor Semilla (HU02)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Login 200 OK', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.environment.set('seller_token', body.token);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"vendedor@minemarket.com\",\n  \"password\": \"Vendedor1\"\n}"
+        },
+        "url": "{{base_url}}/api/auth/login"
+      }
+    },
+    {
+      "name": "5. Catálogo Público (Visitante)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Catálogo accesible 200', () => pm.response.to.have.status(200));",
+              "const items = pm.response.json().items;",
+              "pm.test('Contiene ítems semilla', () => pm.expect(items.length).to.be.above(0));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/api/items"
+      }
+    },
+    {
+      "name": "6. Publicar Ítem como VENDEDOR (HU05)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Ítem creado 201', () => pm.response.to.have.status(201));",
+              "pm.environment.set('created_item_id', pm.response.json().item.id_item);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{seller_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"Kit Postman Test\",\n  \"descripcion\": \"Kit de verificación automatizada Newman\",\n  \"tipo\": \"KIT\",\n  \"precio\": 12500,\n  \"stock\": 8,\n  \"servidor\": \"Survival Tierra\"\n}"
+        },
+        "url": "{{base_url}}/api/items"
+      }
+    },
+    {
+      "name": "7. Publicar Ítem como COMPRADOR Bloqueado (RBAC 403)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('COMPRADOR recibe 403 Forbidden', () => pm.response.to.have.status(403));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{buyer_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"nombre\": \"No Permitido\",\n  \"descripcion\": \"Prueba RBAC negativa\",\n  \"tipo\": \"KIT\",\n  \"precio\": 5000,\n  \"stock\": 5,\n  \"servidor\": \"Lobby\"\n}"
+        },
+        "url": "{{base_url}}/api/items"
+      }
+    },
+    {
+      "name": "8. Agregar Ítem al Carrito (HU03)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Carrito actualizado 200', () => pm.response.to.have.status(200));",
+              "pm.test('Total calculado en backend > 0', () => pm.expect(pm.response.json().carrito.total).to.be.above(0));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{buyer_token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id_item\": {{created_item_id}},\n  \"cantidad\": 2\n}"
+        },
+        "url": "{{base_url}}/api/cart/items"
+      }
+    },
+    {
+      "name": "9. Checkout ACID Aprobado + Idempotency-Key (HU04)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.environment.set('idem_key', `pm-idem-${Date.now()}`);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Orden creada 201', () => pm.response.to.have.status(201));",
+              "const res = pm.response.json();",
+              "pm.test('Estado PAGADO con codigo_uuid y entrega PENDIENTE', () => {",
+              "  pm.expect(res.orden.estado).to.eql('PAGADO');",
+              "  pm.expect(res.orden.codigo_uuid).to.be.a('string');",
+              "  pm.expect(res.entregas[0].estado_entrega).to.eql('PENDIENTE');",
+              "});",
+              "pm.environment.set('last_uuid', res.orden.codigo_uuid);",
+              "pm.environment.set('delivery_id', res.entregas[0].id_entrega);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{buyer_token}}" },
+          { "key": "Idempotency-Key", "value": "{{idem_key}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"metodo_pago\": \"TARJETA_SIMULADA\",\n  \"resultado_simulado\": \"APROBADO\"\n}"
+        },
+        "url": "{{base_url}}/api/orders/checkout"
+      }
+    },
+    {
+      "name": "10. Reintento Idempotente Checkout (RNF04)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Retorna misma orden sin doble cobro', () => {",
+              "  pm.response.to.have.status(201);",
+              "  pm.expect(pm.response.json().orden.codigo_uuid).to.eql(pm.environment.get('last_uuid'));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{buyer_token}}" },
+          { "key": "Idempotency-Key", "value": "{{idem_key}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"metodo_pago\": \"TARJETA_SIMULADA\",\n  \"resultado_simulado\": \"APROBADO\"\n}"
+        },
+        "url": "{{base_url}}/api/orders/checkout"
+      }
+    },
+    {
+      "name": "11. Despachar Entrega (VENDEDOR/ADMIN - HU06)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Entrega despachada a ENTREGADO', () => {",
+              "  pm.response.to.have.status(200);",
+              "  pm.expect(pm.response.json().entrega.estado_entrega).to.eql('ENTREGADO');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{seller_token}}" }
+        ],
+        "url": "{{base_url}}/api/deliveries/{{delivery_id}}/dispatch"
+      }
+    }
+  ]
+}

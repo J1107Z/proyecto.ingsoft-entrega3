@@ -1,0 +1,43 @@
+{
+  "name": "minemarket-backend",
+  "version": "1.0.0",
+  "description": "Backend API REST para MineMarket - Plataforma Transaccional de Items Digitales para Servidores de Minecraft",
+  "main": "src/index.js",
+  "private": true,
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "jest --coverage",
+    "test:watch": "jest --watch",
+    "test:security": "node tests/security_tests.js && node tests/integration_auth_security.js"
+  },
+  "keywords": ["minecraft", "minemarket", "ecommerce", "express", "postgresql"],
+  "author": "Equipo MineMarket - UAO",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.4.0",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "pg": "^8.12.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "roots": ["<rootDir>/tests"],
+    "testMatch": ["**/tests/**/*.test.js"],
+    "collectCoverageFrom": [
+      "src/**/*.js",
+      "!src/index.js"
+    ],
+    "coverageDirectory": "coverage",
+    "coverageReporters": ["lcov", "text", "text-summary"]
+  }
+}

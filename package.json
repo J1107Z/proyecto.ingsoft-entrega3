@@ -1,0 +1,30 @@
+{
+  "name": "minemarket",
+  "version": "1.0.0",
+  "description": "MineMarket - Plataforma Transaccional de Items Digitales para Servidores de Minecraft",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install && npm --prefix backend install && npm --prefix frontend install",
+    "dev": "concurrently -k -n BACKEND,FRONTEND -c green,cyan \"npm --prefix backend run dev\" \"npm --prefix frontend run dev\"",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "test": "npm --prefix backend test && npm --prefix frontend test",
+    "tests": "npm run test",
+    "test:security": "npm --prefix backend run test:security",
+    "tests:e2e": "npm --prefix frontend run tests:e2e",
+    "test:e2e": "npm run tests:e2e",
+    "lint": "eslint backend/src backend/tests frontend/src frontend/tests frontend/e2e",
+    "format": "prettier --write \"backend/src/**/*.js\" \"backend/tests/**/*.js\" \"frontend/src/**/*.{js,jsx}\" \"frontend/tests/**/*.{js,jsx}\" \"frontend/e2e/**/*.js\"",
+    "format:check": "prettier --check \"backend/src/**/*.js\" \"backend/tests/**/*.js\" \"frontend/src/**/*.{js,jsx}\" \"frontend/tests/**/*.{js,jsx}\" \"frontend/e2e/**/*.js\""
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "concurrently": "^9.1.0",
+    "eslint": "^9.18.0",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2"
+  }
+}

@@ -1,0 +1,120 @@
+name: MineMarket CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  quality-and-tests:
+    name: Lint, Unit/Integration Tests, Security & Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies (root, backend, frontend)
+        run: npm run install:all
+
+      - name: Run ESLint static analysis
+        run: npm run lint
+
+      - name: Check Prettier code formatting
+        run: npm run format:check
+
+      - name: Run Backend Jest unit & integration tests with LCOV coverage
+        run: npm --prefix backend test
+
+      - name: Run Backend security & RBAC test suite
+        run: npm --prefix backend run test:security
+
+      - name: Run Frontend Vitest unit tests with LCOV coverage
+        run: npm --prefix frontend test
+
+      - name: Build Frontend production bundle
+        run: npm run build
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: |
+            backend/coverage/lcov.info
+            frontend/coverage/lcov.info
+
+  e2e-playwright:
+    name: End-to-End Tests (Playwright Chromium)
+    runs-on: ubuntu-latest
+    needs: quality-and-tests
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm run install:all
+
+      - name: Install Playwright Chromium browser
+        run: npx --prefix frontend playwright install --with-deps chromium
+
+      - name: Run Playwright E2E suite
+        run: npm run tests:e2e
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report
+          retention-days: 14
+
+  sonar-analysis:
+    name: SonarQube Quality Gate (Backend & Frontend)
+    runs-on: ubuntu-latest
+    needs: quality-and-tests
+    if: ${{ vars.SONAR_HOST_URL != '' && secrets.SONAR_TOKEN != '' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download LCOV coverage reports
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-reports
+          path: .
+
+      - name: Scan Backend with SonarQube
+        uses: SonarSource/sonarqube-scan-action@v5
+        with:
+          projectBaseDir: backend
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+
+      - name: Scan Frontend with SonarQube
+        uses: SonarSource/sonarqube-scan-action@v5
+        with:
+          projectBaseDir: frontend
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
