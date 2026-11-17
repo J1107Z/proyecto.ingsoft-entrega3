@@ -84,7 +84,7 @@ jobs:
     name: SonarQube Quality Gate (Backend & Frontend)
     runs-on: ubuntu-latest
     needs: quality-and-tests
-    if: ${{ vars.SONAR_HOST_URL != '' && secrets.SONAR_TOKEN != '' }}
+    if: ${{ vars.SONAR_HOST_URL != '' }}
 
     steps:
       - name: Checkout repository
