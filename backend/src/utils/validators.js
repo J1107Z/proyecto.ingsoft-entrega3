@@ -1,7 +1,6 @@
 const crypto = require('crypto');
 const {
   GAMERTAG_REGEX,
-  EMAIL_REGEX,
   ITEM_TYPES,
   PUBLIC_REGISTER_ROLES,
   ROLE_ALIASES,
@@ -32,7 +31,14 @@ function sanitizeMinecraftGamertag(gamertag) {
 function isValidEmail(email) {
   if (typeof email !== 'string') return false;
   const clean = email.trim();
-  return clean.length > 3 && clean.length <= 150 && EMAIL_REGEX.test(clean);
+  if (clean.length <= 3 || clean.length > 150 || /\s/.test(clean) || clean.includes('..')) {
+    return false;
+  }
+  const atIndex = clean.indexOf('@');
+  if (atIndex <= 0 || atIndex !== clean.lastIndexOf('@')) return false;
+  const domain = clean.slice(atIndex + 1);
+  const dotIndex = domain.indexOf('.');
+  return dotIndex > 0 && dotIndex < domain.length - 1 && !domain.endsWith('.');
 }
 
 /**

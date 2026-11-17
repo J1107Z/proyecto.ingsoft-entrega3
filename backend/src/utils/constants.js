@@ -1,3 +1,6 @@
+const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
+
 const ROLES = Object.freeze({
   COMPRADOR: 'COMPRADOR',
   VENDEDOR: 'VENDEDOR',
@@ -49,10 +52,9 @@ const SIMULATED_RESULTS = Object.freeze({
 });
 
 const GAMERTAG_REGEX = /^[a-zA-Z0-9_]{3,16}$/;
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-// Valid 60-char BCrypt hash (cost 10) used to equalize response time on missing accounts.
-const DUMMY_BCRYPT_HASH = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
+// Runtime-generated BCrypt hash (cost 10) used to equalize response time on missing accounts.
+const DUMMY_BCRYPT_HASH = bcrypt.hashSync(crypto.randomBytes(24).toString('hex'), 10);
 
 module.exports = {
   ROLES,
@@ -65,6 +67,5 @@ module.exports = {
   DELIVERY_STATUS,
   SIMULATED_RESULTS,
   GAMERTAG_REGEX,
-  EMAIL_REGEX,
   DUMMY_BCRYPT_HASH,
 };
