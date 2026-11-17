@@ -104,7 +104,26 @@ Hauntly-main/
   ```bash
   jmeter -n -t tests/jmeter/minemarket_load_test.jmx -l results.jtl
   ```
-- **SonarQube**: Cada módulo cuenta con su propio `sonar-project.properties` y reporte `coverage/lcov.info` en `backend/` (`minemarket-backend`) y `frontend/` (`minemarket-frontend`).
+- **SonarQube**: Cada módulo cuenta con su propio `sonar-project.properties` (`j1107z_minemarket-backend` y `j1107z_minemarket-frontend`) y reporte `coverage/lcov.info`.
+
+---
+
+## Supuestos, Decisiones Técnicas y Métricas Verificadas
+
+- **Supuestos de Negocio y Seguridad**:
+  - La pasarela de pago se simula (`APROBADO` / `RECHAZADO`) sin capturar datos bancarios reales.
+  - Todo ítem adquirido se entrega in-game al `gamertag_minecraft` verificado en el JWT del comprador (`3–16` chars `[a-zA-Z0-9_]`), nunca desde parámetros editables en el cliente.
+  - Si `DATABASE_URL` no está configurada, el sistema opera con persistencia local en JSON (`MemoryJsonRepository`) con rollback atómico equivalente al `BEGIN/COMMIT/ROLLBACK` de `PgRepository`.
+- **Decisiones Arquitectónicas Clave**:
+  - **Patrón Repository + Factory (`storeRepository.js`)**: Desacopla servicios HTTP del motor de persistencia (PostgreSQL 3NF o JSON/Memoria) facilitando pruebas determinísticas y despliegue dual.
+  - **Cálculo Server-Side + `Idempotency-Key`**: El servidor recalcula totales desde catálogo, ejecuta validación atómica de stock antes de descontar inventario e impide cobros duplicados ante reintentos.
+  - **JWT HS256 (TTL `2h`) + BCrypt (10 rondas) + RBAC (`COMPRADOR`, `VENDEDOR`, `ADMIN`)**: Mitigación anti-timing mediante `DUMMY_BCRYPT_HASH` dinámico, bloqueo de auto-registro `ADMIN` y sanitización de comandos de consola Minecraft.
+- **Resultados y Métricas Verificadas**:
+  - **Cobertura Unitaria/Integración (`npm run tests`)**: Backend **95.56%** statements (`7/7` suites, `60/60` tests) · Frontend **96.97%** statements (`5/5` archivos, `30/30` tests).
+  - **Playwright E2E (`npm run tests:e2e`)**: **10/10** flujos aprobados en Chromium real (`HU01–HU06`, incluidos 4 casos negativos).
+  - **SonarCloud (`main`)**: Backend **90.2%** cobertura (**A/A/A**, `0` issues) · Frontend **A/A/A** (`0` issues), Quality Gate **Passed**.
+  - **Postman / Newman**: **11/11** peticiones y **17/17** aserciones aprobadas (`47 ms` promedio).
+  - **Apache JMeter (`50` usuarios concurrentes)**: **2.050** peticiones, **0.00%** error, **107.0 req/s**, **p95 = 145.4 ms** (cumple SLA `RNF02 p95 <= 200 ms`).
 
 ---
 

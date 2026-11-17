@@ -204,4 +204,65 @@ describe('OrdersView, AuditLogsView y McPlayerFace', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Registrarse' }));
     expect(screen.getByRole('form', { name: 'Formulario de registro' })).toBeInTheDocument();
   });
+
+  it('cubre ramas de error 401/alert en CartView, OrdersView, AuditLogsView y navegación invitado en App', async () => {
+    const { cleanup } = await import('@testing-library/react');
+    const onAuthError = vi.fn();
+    mockFetch(
+      jsonResponse(200, {
+        carrito: {
+          ...populatedCart,
+          items: [{ ...populatedCart.items[0], cantidad: 1 }],
+          total: 25000,
+        },
+      }),
+      jsonResponse(401, { error: 'Sesión expirada' }),
+      jsonResponse(401, { error: 'Sesión expirada' }),
+      jsonResponse(401, { error: 'Sesión expirada' })
+    );
+
+    render(
+      <CartView
+        session={buyerSession}
+        cart={populatedCart}
+        onCartUpdated={vi.fn()}
+        onOrderSuccess={vi.fn()}
+        onBackToCatalog={vi.fn()}
+        onAuthError={onAuthError}
+      />
+    );
+    await userEvent.click(screen.getByLabelText('Disminuir cantidad de Rango VIP Diamante'));
+    await userEvent.click(screen.getByRole('button', { name: 'Quitar' }));
+    expect(onAuthError).toHaveBeenCalledTimes(1);
+    cleanup();
+
+    render(<OrdersView session={adminSession} onAuthError={onAuthError} />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Sesión expirada');
+    cleanup();
+
+    render(<AuditLogsView session={adminSession} onAuthError={onAuthError} />);
+    expect(await screen.findByRole('alert')).toHaveTextContent('Sesión expirada');
+    expect(onAuthError).toHaveBeenCalledTimes(3);
+    cleanup();
+
+    const App = (await import('../../src/App.jsx')).default;
+    mockFetch(
+      jsonResponse(200, [
+        {
+          id_item: 1,
+          nombre: 'Rango VIP',
+          descripcion: 'Desc',
+          tipo: 'RANGO',
+          precio: 25000,
+          stock: 5,
+          servidor: 'Lobby',
+        },
+      ])
+    );
+    render(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Agregar al carrito' }));
+    expect(
+      screen.getByRole('form', { name: 'Formulario de inicio de sesión' })
+    ).toBeInTheDocument();
+  });
 });
